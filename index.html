@@ -523,7 +523,7 @@
                             ondataavailable: function(blob) {
                                 console.log('blob', blob);
                                 getSeekableBlob(blob, function(seekableBlob) {
-                                    uploadToServer('test-' + (new Date() / 1000 | 0) + '.' + fileExtension, seekableBlob);
+                                    uploadToServer('test-' + (new Date() / 1000 | 0) + '.' + fileExtension, seekableBlob, button.recordRTC.startTime);
                                 });
                             }
                         };
@@ -553,6 +553,7 @@
                         var looper = function() {
                             if (button.recording) {
                                 button.recordRTC.stopRecording();
+								button.recordRTC.startTime = new Date().toISOString();
                                 button.recordRTC.startRecording();
                                 looperPromise = setTimeout(looper, 5000);
                             }
@@ -577,7 +578,7 @@
                             video: recordingPlayer,
                             ondataavailable: function(blob) {
                                 console.log('blob', blob);
-                                uploadToServer('test-' + (new Date() / 1000 | 0) + '.' + fileExtension, blob);
+                                uploadToServer('test-' + (new Date() / 1000 | 0) + '.' + fileExtension, blob, button.recordRTC.startTime);
                             }
                         };
 
@@ -606,7 +607,8 @@
                         var looper = function() {
                             if (button.recording) {
                                 button.recordRTC.stopRecording();
-                                button.recordRTC.startRecording();
+								button.recordRTC.startTime = new Date().toISOString();
+                                button.recordRTC.startRecording();								
                                 looperPromise = setTimeout(looper, 10000);
                             }
                         }
@@ -1019,7 +1021,7 @@
                 return info;
             }
 
-            function uploadToServer(fileName, blob) {
+            function uploadToServer(fileName, blob, startTime) {
                 blob = new File([blob], getFileName(fileExtension), {
                     type: mimeType
                 });
@@ -1027,7 +1029,7 @@
 				var reader = new FileReader();
 				reader.onload = function(e) {
 					var contents = e.target.result;
-					uploadFileToKVS(new Uint8Array(contents), new Date().toISOString());
+					uploadFileToKVS(new Uint8Array(contents), startTime);
 				};
 				reader.readAsArrayBuffer(blob);
             }
@@ -1053,6 +1055,24 @@
                 return 'RecordRTC-' + year + month + date + '-' + getRandomString() + '.' + fileExtension;
             }
 
+			function getURL(arg) {
+                var url = arg;
+
+                if(arg instanceof Blob || arg instanceof File) {
+                    url = URL.createObjectURL(arg);
+                }
+
+                if(arg instanceof RecordRTC || arg.getBlob) {
+                    url = URL.createObjectURL(arg.getBlob());
+                }
+
+                if(arg instanceof MediaStream || arg.getTracks) {
+                    // url = URL.createObjectURL(arg);
+                }
+
+                return url;
+            }
+			
             function setVideoURL(arg, forceNonImage) {
                 var url = getURL(arg);
 
