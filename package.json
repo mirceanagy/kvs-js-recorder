@@ -1,0 +1,17 @@
+{
+  "name": "aws4-signer",
+  "version": "1.0.0",
+  "description": "Example project for how to use aws4 in the browser",
+  "main": "index.js",
+  "author": "Michael Hart <michael.hart.au@gmail.com> (http://github.com/mhart)",
+  "license": "ISC",
+  "scripts": {
+    "build": "browserify -o bundle.js index.js --s aws"
+  },
+  "dependencies": {
+    "aws4": "^1.9.1"
+  },
+  "devDependencies": {
+    "browserify": "^16.5.1"
+  }
+}
