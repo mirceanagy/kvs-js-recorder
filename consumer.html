@@ -1,0 +1,38 @@
+<html>
+<head>
+	<script src=bundle.js></script>
+</head>
+<body>
+	<span style="font-size: 15px;">AWS Access Key ID</span>
+                <input type="text" id="accessKey" name="access-key"/>
+				<span style="font-size: 15px;">AWS Secret Key</span>
+                <input type="text" id="secretKey" name="secret-key"/>
+                <br>
+    <video id="video"></video>
+    <script>
+        var video = document.getElementById("video");
+        setInterval(function() {
+		aws.getMedia(
+			{			
+			'endpoint' : 'https://s-b1731d75.kinesisvideo.us-west-2.amazonaws.com',
+			'accessKeyId' : document.querySelector('#accessKey').value,
+			'secretAccessKey' : document.querySelector('#secretKey').value,
+			'region' : 'us-west-2'
+			},
+			{
+			  StartSelector: {
+				StartSelectorType: 'NOW',				
+			  },			  
+			  StreamName: 'mnagy-fin-kvs'
+			}, function(err, data) {
+			  if (err) console.log(err, err.stack);
+			  else {
+					video.src = URL.createObjectURL(new Blob([data.Payload], { type: data.ContentType}));
+					video.play();
+			  }
+			}
+		)
+        }, 5000);        
+    </script>
+</body>
+</html>

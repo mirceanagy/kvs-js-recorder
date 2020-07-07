@@ -9,7 +9,9 @@
     "build": "browserify -o bundle.js index.js --s aws"
   },
   "dependencies": {
-    "aws4": "^1.9.1"
+    "aws4": "^1.9.1",
+    "aws-sdk": ">= 2.0.9",
+    "node-uuid": ">= 1.4.1"
   },
   "devDependencies": {
     "browserify": "^16.5.1"

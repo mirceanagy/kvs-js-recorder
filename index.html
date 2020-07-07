@@ -95,13 +95,7 @@
 
 <body>
     <article>
-        <header style="text-align: center;">
-            <h1>
-                Audio+Video+Screen Recording using <a href="https://github.com/muaz-khan/RecordRTC">RecordRTC</a>
-            </h1>
-
-        </header>
-
+        
         <section class="experiment recordrtc">
             <h2 class="header" style="margin: 0;">
                 <select class="recording-media">
@@ -172,11 +166,8 @@
                 </select>
             </h2>
 
-            <div style="text-align: center; display: none;">
-                <button id="periodic-upload">Periodic Upload</button>
-            </div>
-
             <div style="margin-top: 10px;" id="recording-player"></div>
+			<video id="consumer"></video>
         </section>
 
         <script>
@@ -238,10 +229,63 @@
 				'x-amz-content-sha256': 'UNSIGNED-PAYLOAD' 
 			},
 			body: contents
-		}, document.querySelector('#accessKey').value, document.querySelector('#secretKey').value));
+		}, document.querySelector('#accessKey').value, document.querySelector('#secretKey').value),
+		(res) => {
+			  console.log('statusCode:', res.statusCode);
+			  console.log('headers:', res.headers);
+			}
+		);
 	}
         </script>
+		<script>
+		var arrayOfBlobs = [];
+        
+		// 1. Create a `MediaSource`
+        var mediaSource = new MediaSource();
 
+        // 2. Create an object URL from the `MediaSource`
+        var url = URL.createObjectURL(mediaSource);
+
+        // 3. Set the video's `src` to the object URL
+        var consumervideo = document.getElementById("consumer");
+        consumervideo.src = url;
+
+        // 4. On the `sourceopen` event, create a `SourceBuffer`
+        var sourceBuffer = null;
+        mediaSource.addEventListener("sourceopen", function()
+        {
+            // NOTE: Browsers are VERY picky about the codec being EXACTLY
+            // right here. Make sure you know which codecs you're using!
+            sourceBuffer = mediaSource.addSourceBuffer('video/x-matroska;codecs=avc1');
+
+            // If we requested any video data prior to setting up the SourceBuffer,
+            // we want to make sure we only append one blob at a time
+            sourceBuffer.addEventListener("updateend", appendToSourceBuffer);
+        });
+
+        // 5. Use `SourceBuffer.appendBuffer()` to add all of your chunks to the video
+        function appendToSourceBuffer()
+        {
+            if (
+                mediaSource.readyState === "open" &&
+                sourceBuffer &&
+                sourceBuffer.updating === false
+            )
+            {
+                sourceBuffer.appendBuffer(arrayOfBlobs.shift());
+            }
+
+            // Limit the total buffer size to 20 minutes
+            // This way we don't run out of RAM
+            if (
+                consumervideo.buffered.length &&
+                consumervideo.buffered.end(0) - consumervideo.buffered.start(0) > 1200
+            )
+            {
+                sourceBuffer.remove(0, consumervideo.buffered.end(0) - 1200)
+            }
+        }
+		</script>
         <script>
             var video = document.createElement('video');
             video.controls = false;
@@ -522,9 +566,9 @@
                             timeSlice: 50000,
                             ondataavailable: function(blob) {
                                 console.log('blob', blob);
-                                getSeekableBlob(blob, function(seekableBlob) {
-                                    uploadToServer('test-' + (new Date() / 1000 | 0) + '.' + fileExtension, seekableBlob, button.recordRTC.startTime);
-                                });
+								uploadToServer('test-' + (new Date() / 1000 | 0) + '.' + fileExtension, blob, button.recordRTC.startTime);
+								consumervideo.src = window.URL.createObjectURL(blob);
+								consumervideo.play();
                             }
                         };
 
@@ -1283,8 +1327,6 @@
 
     </article>
 
-    <script src="https://www.webrtc-experiment.com/commits.js" async></script>
-    <script src="https://apis.google.com/js/client:plusone.js"></script>
 </body>
 
 </html>
