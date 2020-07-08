@@ -167,7 +167,6 @@
             </h2>
 
             <div style="margin-top: 10px;" id="recording-player"></div>
-			<video id="consumer"></video>
         </section>
 
         <script>
@@ -237,55 +236,7 @@
 		);
 	}
         </script>
-		<script>
-		var arrayOfBlobs = [];
-        
-		// 1. Create a `MediaSource`
-        var mediaSource = new MediaSource();
 
-        // 2. Create an object URL from the `MediaSource`
-        var url = URL.createObjectURL(mediaSource);
-
-        // 3. Set the video's `src` to the object URL
-        var consumervideo = document.getElementById("consumer");
-        consumervideo.src = url;
-
-        // 4. On the `sourceopen` event, create a `SourceBuffer`
-        var sourceBuffer = null;
-        mediaSource.addEventListener("sourceopen", function()
-        {
-            // NOTE: Browsers are VERY picky about the codec being EXACTLY
-            // right here. Make sure you know which codecs you're using!
-            sourceBuffer = mediaSource.addSourceBuffer('video/x-matroska;codecs=avc1');
-
-            // If we requested any video data prior to setting up the SourceBuffer,
-            // we want to make sure we only append one blob at a time
-            sourceBuffer.addEventListener("updateend", appendToSourceBuffer);
-        });
-
-        // 5. Use `SourceBuffer.appendBuffer()` to add all of your chunks to the video
-        function appendToSourceBuffer()
-        {
-            if (
-                mediaSource.readyState === "open" &&
-                sourceBuffer &&
-                sourceBuffer.updating === false
-            )
-            {
-                sourceBuffer.appendBuffer(arrayOfBlobs.shift());
-            }
-
-            // Limit the total buffer size to 20 minutes
-            // This way we don't run out of RAM
-            if (
-                consumervideo.buffered.length &&
-                consumervideo.buffered.end(0) - consumervideo.buffered.start(0) > 1200
-            )
-            {
-                sourceBuffer.remove(0, consumervideo.buffered.end(0) - 1200)
-            }
-        }
-		</script>
         <script>
             var video = document.createElement('video');
             video.controls = false;
@@ -567,8 +518,6 @@
                             ondataavailable: function(blob) {
                                 console.log('blob', blob);
 								uploadToServer('test-' + (new Date() / 1000 | 0) + '.' + fileExtension, blob, button.recordRTC.startTime);
-								consumervideo.src = window.URL.createObjectURL(blob);
-								consumervideo.play();
                             }
                         };
 
@@ -741,25 +690,7 @@
                 }
 
                 value = parseInt(value);
-
-                if(DetectRTC.browser.name === 'Firefox') {
-                    mediaConstraints.video.frameRate = value;
-                    return mediaConstraints;
-                }
-
-                if(!mediaConstraints.video.mandatory) {
-                    mediaConstraints.video.mandatory = {};
-                    mediaConstraints.video.optional = [];
-                }
-
-                var isScreen = recordingMedia.value.toString().toLowerCase().indexOf('screen') != -1;
-                if(isScreen) {
-                    mediaConstraints.video.mandatory.maxFrameRate = value;
-                }
-                else {
-                    mediaConstraints.video.mandatory.minFrameRate = value;
-                }
-
+                mediaConstraints.video.frameRate = value;                
                 return mediaConstraints;
             }
 
@@ -805,28 +736,8 @@
                 defaultWidth = parseInt(value[0]);
                 defaultHeight = parseInt(value[1]);
 
-                if(DetectRTC.browser.name === 'Firefox') {
-                    mediaConstraints.video.width = defaultWidth;
-                    mediaConstraints.video.height = defaultHeight;
-                    return mediaConstraints;
-                }
-
-                if(!mediaConstraints.video.mandatory) {
-                    mediaConstraints.video.mandatory = {};
-                    mediaConstraints.video.optional = [];
-                }
-
-                var isScreen = recordingMedia.value.toString().toLowerCase().indexOf('screen') != -1;
-
-                if(isScreen) {
-                    mediaConstraints.video.mandatory.maxWidth = defaultWidth;
-                    mediaConstraints.video.mandatory.maxHeight = defaultHeight;
-                }
-                else {
-                    mediaConstraints.video.mandatory.minWidth = defaultWidth;
-                    mediaConstraints.video.mandatory.minHeight = defaultHeight;
-                }
-
+                mediaConstraints.video.width = defaultWidth;
+                mediaConstraints.video.height = defaultHeight;
                 return mediaConstraints;
             }
 
@@ -1179,12 +1090,10 @@
 
         <script>
             function captureScreen(config) {
+                var mediaConstraints = getVideoResolutions({video: {resizeMode : "crop-and-scale"}});
+                mediaConstraints = getFrameRates(mediaConstraints);
                 if (navigator.getDisplayMedia) {
-                    navigator.getDisplayMedia({
-                        video: {
-                            frameRate : 5
-                        }
-                    }).then(screenStream => {
+                    navigator.getDisplayMedia(mediaConstraints).then(screenStream => {
                         config.onMediaCaptured(screenStream);
 
                         addStreamStopListener(screenStream, function() {
@@ -1198,9 +1107,7 @@
                         config.onMediaCapturingFailed(error);
                     });
                 } else if (navigator.mediaDevices.getDisplayMedia) {
-                    navigator.mediaDevices.getDisplayMedia({
-                        video: true
-                    }).then(screenStream => {
+                    navigator.mediaDevices.getDisplayMedia(mediaConstraints).then(screenStream => {
                         config.onMediaCaptured(screenStream);
 
                         addStreamStopListener(screenStream, function() {
